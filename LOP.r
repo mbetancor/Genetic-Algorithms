@@ -111,3 +111,53 @@ REMOVE_DUPLICATES <- function(elements, sorted_list) {
 
 }
 
+PMX <- function(str1, str2) {
+	len <- length(str1)
+	random_cut_points <- sample(1:len,2, replace=F)
+	rc1 <- min(random_cut_points)
+	rc2 <- max(random_cut_points)
+
+	ms1 <- str1[rc1:rc2]
+	ms2 <- str2[rc1:rc2]
+
+	off1[rc1:rc2] <- ms2
+	off2[rc1:rc2] <- ms1
+
+	order <- order(ms1)
+
+	index <- 1
+
+	for i in order:
+		map_section_1[index] <- ms1[i]
+		map_section_2[index] <- ms2[i]
+		index <- index+1
+
+	map_sections_arr <- REMOVE_DUPLICATES(map_section_1, map_section_2)
+
+	ms1 <- map_sections_arr[1]
+	ms2 <- map_sections_arr[2]
+
+	for i in (1:len)[-(rc1:rc2)]:
+		item_list_1 <- which(ms1==str1[i])
+		item_list_2 <- which(ms2==str2[i])
+
+		if (length(item_list_1)){
+			off1[i] <- ms2[item_list_1]
+		}
+
+		else {
+			off1[i] <- str1[i]
+		}
+
+		if (length(item_list_2)){
+			off2[i] <- ms1[item_list_2]
+		}
+
+		else {
+			off2[i] <- str2[i]
+		}
+
+	print(off1)
+	print(off2)
+
+}
