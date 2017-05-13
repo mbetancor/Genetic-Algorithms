@@ -161,3 +161,61 @@ PMX <- function(str1, str2) {
 	print(off2)
 
 }
+
+
+# Cycle CrossOver (CX)
+
+CX <- function(str1, str2) {
+	len <- length(str1)
+	off <-  integer(len)
+	seeked <- str2[1]
+	elem <- str1[1]
+	off[1] <- elem
+	p <- 0
+
+	while(length(which[off==0])>0){
+
+		i <- which[off==0][1]
+
+		if (seeked==0){
+			if (p==0){
+				seeked <-str2[i]
+				elem <- str1[i]
+				off[i] <- elem
+			}
+			else {
+				seeked <-str1[i]
+				elem <- str2[i]
+				off[i] <- elem
+			}
+		}
+		if (p==0){ #parent2
+
+			while(str2[i]!=elem){
+				i <- i+1
+			}
+
+			elem <- str1[i]
+		} 
+		else {
+
+			while(str1[i]!=elem){
+				i <- i+1
+			}
+
+			elem <- str2[i]
+
+		}
+
+		off[i] <- elem
+
+		if (elem == seeked) {
+			 p <- (p+1) %% 2
+			 seeked <- 0
+
+		}
+	
+	}
+
+	off
+}
