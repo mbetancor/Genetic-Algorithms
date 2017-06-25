@@ -14,10 +14,11 @@ function(str1, str2,.op.cross ="pmx", .pr.cross=0.6)
 		CROSS <- (crossover.ox2(str1,str2, off1, off2, size, len))
 	if(.op.cross == "pos") 
 		CROSS <- (crossover.pos(str1,str2, off1, off2, size, len))
-	if(.op.cross == "ap2") 
-		CROSS <- (rbind(crossover.ap(str1,str2, off1, off2, len),(crossover.ap(str2,str1, off1,off2, len))))
 	if(.op.cross == "ap") 
 		CROSS <- (rbind(crossover.ap(str1,str2, off1, off2, len)))
+	if(.op.cross == "ap2") 
+		CROSS <- (rbind(crossover.ap(str1,str2, off1, off2, len),(crossover.ap(str2,str1, off1,off2, len))))
+	
 
 	return(CROSS)
 }
@@ -25,20 +26,21 @@ function(str1, str2,.op.cross ="pmx", .pr.cross=0.6)
 crossover.pmx <- 
 function(str1, str2, off1, off2, size, len) 
 {
-	rc1 <- sample(1:(len-size),1)
-	rc2 <- sample((rc1+1):len,1)
 
-	map_section_1 <- integer(rc2-rc1)
-	map_section_2 <- integer(rc2-rc1)
+	rc1 			<- sample(1:(len-size),1) #random_cut_points
+	rc2 			<- sample((rc1+1):len,1)
 
-	ms1 <- str1[rc1:rc2]
-	ms2 <- str2[rc1:rc2]
+	map_section_1 	<- integer(rc2-rc1)
+	map_section_2 	<- integer(rc2-rc1)
 
-	off1[rc1:rc2] <- ms2
-	off2[rc1:rc2] <- ms1
+	ms1 			<- str1[rc1:rc2]
+	ms2 			<- str2[rc1:rc2]
 
-	order <- order(ms1)
-	index <- 1
+	off1[rc1:rc2] 	<- ms2
+	off2[rc1:rc2] 	<- ms1
+
+	order 			<- order(ms1)
+	index 			<- 1
 
 	for (i in order){
 		map_section_1[index] <- ms1[i]
