@@ -4,10 +4,12 @@ source('mutations.R')
 generate_offspring <- 
 function(population, .op.cross="pmx", .op.mut="sim", .times=20, .pr.cross = 0.6 , .pr.mut = 0.1) {
 	next_gen <- population
-	len <- length(unlist(population[1]))
+	len <- length(population)
+	.times <- round(.times/2)
+
 	if (.op.cross=="ap")
 		for (i in 1:(2*.times)){
-			indexes 	 <- sample(1:length(population),2,replace=F)
+			indexes 	 <- sample(1:len,2,replace=F)
 			individual_1 <- population[[indexes[1]]]
 			individual_2 <- population[[indexes[2]]]
 
@@ -17,12 +19,12 @@ function(population, .op.cross="pmx", .op.mut="sim", .times=20, .pr.cross = 0.6 
 		}
 	else 
 		for (i in 1:.times){
-			indexes		 <- sample(1:length(population),2,replace=F)
+			indexes		 <- sample(1:len,2,replace=F)
 			individual_1 <- population[[indexes[1]]]
 			individual_2 <- population[[indexes[2]]]
 
 			# crossover
-			ans <- CROSSOVER(individual_1,individual_2, .op.cross, .pr.cross)
+			ans <- CROSSOVER(individual_1, individual_2, .op.cross, .pr.cross)
 			individual_1 <- ans[1,]
 			individual_2 <- ans[2,]
 			

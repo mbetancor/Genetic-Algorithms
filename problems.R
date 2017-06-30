@@ -1,7 +1,12 @@
+library(foreach)
+library(parallel)
+library(doParallel)
+
 source('generations.R')
 
 SOLVE <- function(data, .problem="TSP", pop.size=20, pr.elit=0.15, pr.cross=0.6, pr.mut=0.1, op.cross="pmx", op.mut="sim", .time.limit=60)
 {
+
 	t 					<- Sys.time()
 	elitists 			<- max(round(pop.size*pr.elit),3)
 	init_population_row <- replicate(pop.size,list(sample(nrow(data)))) 
@@ -14,7 +19,6 @@ SOLVE <- function(data, .problem="TSP", pop.size=20, pr.elit=0.15, pr.cross=0.6,
 	
 	if (.problem=="TSP")
 	{
-		print("pasa")
 		pop_results 	<- fun_cost(data,init_population_row)
 	}
 
@@ -70,8 +74,8 @@ function(data, init_population_row, init_population_col = 0, .problem="TSP")
 		COST <- mapply(function(x) fun_cost.tsp(x,data), init_population_row)
 	if (.problem=="LOP") 
 		COST <- mapply(function(x,y) fun_cost.lop(x,y,data), init_population_row, init_population_col)
-	if (.problem=="BER") 
-		COST <- mapply(function(x,y) fun_cost.bertin(x, y, data), init_population_row, init_population_col)
+	if (.problem=="TAB") 
+		COST <- mapply(function(x,y) fun_cost.tab(x, y, data), init_population_row, init_population_col)
 
 	return(COST)
 }
@@ -112,7 +116,6 @@ function(x1,y1,x2,y2)
 	(x+y)**(0.5)
 }
 
-
 fun_cost.lop <- 
 function(list_row, list_col, data) 
 {	
@@ -124,7 +127,7 @@ function(list_row, list_col, data)
 	{
 		for (j in 1:len)
 		{
-			ans <- ans + new_matrix[j,1]
+			ans 	<- ans + new_matrix[j,1]
 		}
 		
 		new_matrix 	<- new_matrix[-1,-1]
@@ -134,7 +137,7 @@ function(list_row, list_col, data)
 	ans
 }
 
-fun_cost.bertin <- 
+fun_cost.tab <- 
 function(list_row, list_col, data)
 {
 	ans 		<- 0
@@ -142,15 +145,22 @@ function(list_row, list_col, data)
 	nrows 		<- length(list_row)
 	new_matrix 	<- get_matrix(list_row, list_col ,data)
 
-	for (i in 1:(ncols-1)){
+	for (i in 1:(nrows-1))
+	{
 		c1 <- new_matrix[i,]
 		c2 <- new_matrix[i+1,]
 		ans <- sum((c1+c2) %%2) + ans
 	}
 
-	ans
-}
+	for(i in 1:(ncols-1)) 
+	{
+		c1 <- new_matrix[,i]
+		c2 <- new_matrix[,i+1]
+		ans <- sum((c1+c2) %%2) + ans
+	}
 
+	return(ans)
+}
 
 get_matrix <- 
 function(list_row, list_col, data) 
@@ -186,3 +196,12 @@ function(vector, order)
 	}
 	ans
 }
+
+# similarity <-
+# function(perm1, perm2)
+# {
+# 	len 			<- length(perm1)
+# 	coincidences	<- sum( mapply( function(x) (perm1[x] == perm2[x]), 1:len) )
+
+# 	return(coincidences/len)
+# }

@@ -1,7 +1,7 @@
 CROSSOVER <- 
 function(str1, str2,.op.cross ="pmx", .pr.cross=0.6) 
 {
-	len <- length(str1)
+	len  <- length(str1)
 	size <-  len * .pr.cross 
 	off1 <- integer(len)
 	off2 <- integer(len)
@@ -15,10 +15,7 @@ function(str1, str2,.op.cross ="pmx", .pr.cross=0.6)
 	if(.op.cross == "pos") 
 		CROSS <- (crossover.pos(str1,str2, off1, off2, size, len))
 	if(.op.cross == "ap") 
-		CROSS <- (rbind(crossover.ap(str1,str2, off1, off2, len)))
-	if(.op.cross == "ap2") 
-		CROSS <- (rbind(crossover.ap(str1,str2, off1, off2, len),(crossover.ap(str2,str1, off1,off2, len))))
-	
+		CROSS <- (rbind(crossover.ap(str1,str2, size, len),(crossover.ap(str2, str1, size, len))))
 
 	return(CROSS)
 }
@@ -27,8 +24,8 @@ crossover.pmx <-
 function(str1, str2, off1, off2, size, len) 
 {
 
-	rc1 			<- sample(1:(len-size),1) #random_cut_points
-	rc2 			<- sample((rc1+1):len,1)
+	rc1 			<- sample(1:(len-size),1) 
+	rc2 			<- rc1+size
 
 	map_section_1 	<- integer(rc2-rc1)
 	map_section_2 	<- integer(rc2-rc1)
@@ -81,27 +78,28 @@ function(str1, str2, off1, off2, size, len)
 crossover.ox1 <-
 function(str1, str2, off1, off2,size, len) 
 {
+	rc1 			<- sample(1:(len-size),1) 
+	rc2 			<- rc1+size
 
-	size <- len - size
-	rc1 <- sample(1:(len-size),1)
-	rc2 <- sample((rc1+1):len,1)
+	off1[rc1:rc2] 	<- str1[rc1:rc2]
+	off2[rc1:rc2] 	<- str2[rc1:rc2]
 
-	off1[rc1:rc2] <- str1[rc1:rc2]
-	off2[rc1:rc2] <- str2[rc1:rc2]
+	path_sequence 	<- append((rc2:len)[(rc2:len)>rc2], (1:rc1)[(1:rc1)<rc1])
 
-	path_sequence <- append((rc2:len)[(rc2:len)>rc2], (1:rc1)[(1:rc1)<rc1])
+	path1			<- append(str2[(rc2:len)[(rc2:len)>rc2]],str2[(1:rc2)])
+	path2 			<- append(str1[(rc2:len)[(rc2:len)>rc2]],str1[(1:rc2)])
 
-	path1 <- append(str2[(rc2:len)[(rc2:len)>rc2]],str2[(1:rc2)])
-	path2 <- append(str1[(rc2:len)[(rc2:len)>rc2]],str1[(1:rc2)])
+	path1 			<- path1[!path1 %in% str1[rc1:rc2]]
+	path2 			<- path2[!path2 %in% str2[rc1:rc2]]
 
-	path1 <- path1[!path1 %in% str1[rc1:rc2]]
-	path2 <- path2[!path2 %in% str2[rc1:rc2]]
+	index 			<- 1
 
-	index <- 1
 	for (i in path_sequence){
-		off1[i] <- path1[index]
-		off2[i] <- path2[index]
-		index <- index+1	
+
+		off1[i] 	<- path1[index]
+		off2[i] 	<- path2[index]
+		index 		<- index+1	
+	
 	}
 
 	return(rbind(off1,off2))
@@ -111,16 +109,16 @@ function(str1, str2, off1, off2,size, len)
 crossover.ox2 <- 
 function(str1, str2, off1, off2,size, len) 
 {
-	rc1 <- sample(1:(len-size),1)
-	rc2 <- sample((rc1+2):len,1)
+	rc1 			<- sample(1:(len-size),1) 
+	rc2 			<- rc1+size
 
-	off1[1:rc1] <- str1[1:rc1]
-	off1[rc2:len] <- str1[rc2:len]
+	off1[1:rc1] 	<- str1[1:rc1]
+	off1[rc2:len] 	<- str1[rc2:len]
 	
-	off2[1:rc1] <- str2[1:rc1]
-	off2[rc2:len] <- str2[rc2:len]
+	off2[1:rc1] 	<- str2[1:rc1]
+	off2[rc2:len] 	<- str2[rc2:len]
 
-	path_sequence <- c( (rc1+1): (rc2-1))
+	path_sequence 	<- c((rc1+1): (rc2-1))
 
 	path1 <- str2
 	path2 <- str1
@@ -132,7 +130,7 @@ function(str1, str2, off1, off2,size, len)
 	for (i in path_sequence){
 		off1[i] <- path1[index]
 		off2[i] <- path2[index]
-		index <- index+1	
+		index 	<- index+1	
 	}
 
 	return(rbind(off1,off2))
@@ -144,17 +142,17 @@ function(str1, str2, off1, off2, size, len)
 {
 
 	n_random_points <- sample(2:size,1)
-	random_points <- sample(1:len, n_random_points, replace=F)
-	path_sequence <- (1:len)[!(1:len) %in% random_points]
-	acc1 <- c()
-	acc2 <- c()
-	index <- 1
+	random_points 	<- sample(1:len, n_random_points, replace=F)
+	path_sequence 	<- (1:len)[!(1:len) %in% random_points]
+	acc1 			<- c()
+	acc2 			<- c()
+	index 			<- 1
 
 	for (i in random_points){
 		off1[i] <- str2[i]
 		off2[i] <- str1[i]
-		acc1 <- c(acc1, str1[i])
-		acc2 <- c(acc2, str2[i])
+		acc1 	<- c(acc1, str1[i])
+		acc2 	<- c(acc2, str2[i])
 	}
 
 	seq1 <- str1[!str1 %in% acc2]
@@ -163,7 +161,7 @@ function(str1, str2, off1, off2, size, len)
 	for (i in path_sequence){
 		off1[i] <- seq1[index]
 		off2[i] <- seq2[index]
-		index <- index+1 
+		index 	<- index+1 
 	}
 	
 	return(rbind(off1,off2))
@@ -174,18 +172,20 @@ crossover.ap <-
 function(str1, str2, .pr.cross, len) 
 {
 
-	off <- c()
-	turn <- 0
-	parents <- rbind(str1,str2)
+	off 		<- c()
+	turn 		<- 0
+	parents 	<- rbind(str1,str2)
+
 	while(length(off)<len){
 
-		p <- parents[turn+1,]
+		p 	<- parents[turn+1,]
+		
 		while(p[1] %in% off) {
 			p <- p[-1]
 		}
 		
-		off <- c(off,p[1])
-		turn <- ((turn+1) %% 2)	
+		off 	<- c(off,p[1])
+		turn 	<- ((turn+1) %% 2)	
 	}
 
 	return(off)
@@ -203,7 +203,7 @@ function(elements, sorted_list)
 
 		if (length(new_pos)) {
 			elements[i] <- elements[new_pos]
-			elements <- elements[-new_pos]
+			elements 	<- elements[-new_pos]
 			sorted_list <- sorted_list[-new_pos]
 		}
 

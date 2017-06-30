@@ -10,7 +10,7 @@ library(bertin)
 
 source('problems.R')
 
-MAIN <- function(data, PDFfilename, .problem="TSP" ,pop.size=20, pr.elit=0.15, pr.cross=0.6, pr.mut=0.1, op.cross="pmx", op.mut="sim", .time.limit=10)
+MAIN <- function(data, PDFfilename="ga.pdf", .problem="TSP" ,pop.size=20, pr.elit=0.15, pr.cross=0.6, pr.mut=0.1, op.cross="pmx", op.mut="sim", .time.limit=10)
 {
 
 	# Calculate the number of cores
@@ -19,7 +19,6 @@ MAIN <- function(data, PDFfilename, .problem="TSP" ,pop.size=20, pr.elit=0.15, p
 	# Initiate cluster
 	cluster	<- makeCluster(n_cores)
 	registerDoParallel(cluster)
-
 
 	if (.problem=="LOP") {
 		data <- data - min(data)
@@ -34,7 +33,7 @@ MAIN <- function(data, PDFfilename, .problem="TSP" ,pop.size=20, pr.elit=0.15, p
 			SOLVE(data, .problem, pops.size, pr.elit, pr.cross , pr.mut, op.cross, op.mut, .time.limit))
 	}
 
-	if (length(pr.elit)>1) 
+	else if (length(pr.elit)>1) 
 	{
 		legend 	<- "elitism percentage"
 		array 	<- pr.elit 
@@ -42,7 +41,7 @@ MAIN <- function(data, PDFfilename, .problem="TSP" ,pop.size=20, pr.elit=0.15, p
 			SOLVE(data, .problem, pop.size, prs.elit, pr.cross , pr.mut, op.cross, op.mut, .time.limit))	
 	}
 		
-	if (length(pr.cross)>1) 
+	else if (length(pr.cross)>1) 
 	{
 		legend 	<- "probability crossover"
 		array 	<- pr.cross
@@ -50,7 +49,7 @@ MAIN <- function(data, PDFfilename, .problem="TSP" ,pop.size=20, pr.elit=0.15, p
 			SOLVE(data, .problem, pop.size, pr.elit, prs.cross , pr.mut, op.cross, op.mut, .time.limit))	
 	}
 
-	if (length(pr.mut)>1) 
+	else if (length(pr.mut)>1) 
 	{
 		legend 	<- "probability mutation"
 		array 	<- pr.mut
@@ -58,7 +57,7 @@ MAIN <- function(data, PDFfilename, .problem="TSP" ,pop.size=20, pr.elit=0.15, p
 			SOLVE(data, .problem, pop.size, pr.elit, pr.cross , prs.mut, op.cross, op.mut, .time.limit))
 	}
 		
-	if (length(op.cross)>1)
+	else if (length(op.cross)>1)
 	{
 		legend 	<- "operator crossover"
 		array 	<- op.cross
@@ -66,14 +65,21 @@ MAIN <- function(data, PDFfilename, .problem="TSP" ,pop.size=20, pr.elit=0.15, p
 			SOLVE(data, .problem, pop.size, pr.elit, pr.cross , pr.mut, ops.cross, op.mut, .time.limit))
 	}
 		
-	if (length(pr.mut)>1) 
+	else if (length(op.mut)>1) 
 	{
 		legend 	<- "operator mutation"
-		array 	<- pr.mut 
+		array 	<- op.mut 
 		results <- (foreach(ops.mut=op.mut, .combine=rbind, .export=ls(.GlobalEnv)) %dopar% 
 			SOLVE(data, .problem, pop.size, pr.elit, pr.cross , pr.mut, op.cross, ops.mut, .time.limit))
 	}
 	
+	else 
+	{	
+		array 	<- c("")
+		legend 	<- paste("problem", .problem, "pop size", pop.size, "pr.elit", pr.elit, "pr.cross", pr.cross, "pr.mut", pr.mut, "op.cross", op.cross, "op.mut", op.mut)
+		results <- SOLVE(data, .problem, pop.size, pr.elit, pr.cross , pr.mut, op.cross, op.mut, .time.limit)
+	}
+
 	aux_results 	<- list()
 	aux_qu_results 	<- list()
 	matrix_start 	<- list()
@@ -85,13 +91,15 @@ MAIN <- function(data, PDFfilename, .problem="TSP" ,pop.size=20, pr.elit=0.15, p
 	end_results 	<- c()
 	counter			<- 1
 
+	print(results)
 	for (its in results[,2])
 	{
 		n_its 	 <- c(n_its,its)
 		quarters <- c(quarters, round(its*0.75))
 	}
 
-	if (.problem=="TSP") {
+	if (.problem=="TSP") 
+	{
 		for (result in results[,1]) 
 		{
 			total_its    	<- n_its[counter]
@@ -131,9 +139,10 @@ MAIN <- function(data, PDFfilename, .problem="TSP" ,pop.size=20, pr.elit=0.15, p
 	max_init_result <- max(init_results)
 	max_qu_result 	<- max(quarter_results) 
 	min_end_result 	<- min(end_results)
+	counter 		<- max(1,counter-1)
 
 	pdf(file=PDFfilename)
-	for (iterator in 1:(counter-1))
+	for (iterator in 1:counter)
 	{
 		iterations 		<- n_its[iterator]
 		curr_quarter	<- quarters[iterator]
@@ -166,14 +175,14 @@ MAIN <- function(data, PDFfilename, .problem="TSP" ,pop.size=20, pr.elit=0.15, p
 			hamiltonian_graph 	<- qplot(xlab="X-axe", ylab="Y-axe",
 			repr_start_x,
 			repr_start_y,
-			main=paste(main_title,paste("with result",max_init_result))) +
+			main=paste(main_title,paste("with result",init_results[iterator]))) +
 			geom_point(color="palevioletred1") +
 			geom_line(color="grey")
 
 			hamiltonian_graph_end <- qplot(xlab="X-axe", ylab="Y-axe",
 			repr_end_x,
 			repr_end_y,
-			main=paste(main_title,paste("with result",min_end_result))) +
+			main=paste(main_title,paste("with result",end_results[iterator]))) +
 			geom_point(color="palevioletred1") +
 			geom_line(color="grey")
 
@@ -193,7 +202,6 @@ MAIN <- function(data, PDFfilename, .problem="TSP" ,pop.size=20, pr.elit=0.15, p
 
 		if (.problem=="BER")
 		{
-			print("hola")
 			levelplot <- plot.bertin(matrix_end[iterator][[1]])
 			print(levelplot)
 		} 	
@@ -204,10 +212,7 @@ MAIN <- function(data, PDFfilename, .problem="TSP" ,pop.size=20, pr.elit=0.15, p
 
 	stopCluster(cluster)
 
-	return(matrix_end[1])
-
-}	
-
+}
 
 plot_data <- 
 function(data, perm){
