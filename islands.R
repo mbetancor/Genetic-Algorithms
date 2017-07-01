@@ -6,6 +6,7 @@ library(parallel)
 library(doParallel)
 library(colorspace)
 library(RColorBrewer)
+library(bertin)
 
 source('problems.R')
 source('heuristics.R')
@@ -62,7 +63,7 @@ ISLANDS <-
 
 		R_PERM1	<- sample(1:nrow(data)) # RANDOM_PERMUTATION
 		R_PERM2 <- sample(1:ncol(data))
-		INIT 	<- fun_cost.lop(R_PERM1, RPERM2, data)
+		INIT 	<- fun_cost.lop(R_PERM1, R_PERM2, data)
 		ANS 	<- ISLANDS.LOP(data, PDFfilename, .pop.size, .pr.elit, pr.cross, pr.mut, op.cross, op.mut,
 			init.individuals, .per.sampling,
 			.emigration.policy, .per.limit,
@@ -75,13 +76,8 @@ ISLANDS <-
 		M_START	<- get_matrix(R_PERM1, R_PERM2, data)
 		M_END 	<- get_matrix(ANS_ROW, ANS_COL, data)
 
-		M_START <- mapply( function(x) cbind(data[x,1],data[x,2]), R_PERM)
-		M_END	<- mapply( function(x) cbind(data[x,1],data[x,2]), ANS_MTX)
-
 		PLOT_START 	<- myImagePlot(M_START, xlab="X-axe", ylab="Y-axe", zlim=c(0,1))
-			print(levelplot)
 		PLOT_END 	<- myImagePlot(M_END, xlab="X-axe", ylab="Y-axe", zlim=c(0,1))
-			print(levelplot)
 
 		print(PLOT_START)
 		print(PLOT_END)
@@ -92,7 +88,7 @@ ISLANDS <-
 
 		R_PERM1	<- sample(1:nrow(data)) # RANDOM_PERMUTATION
 		R_PERM2 <- sample(1:ncol(data))
-		INIT 	<- fun_cost.lop(R_PERM1, RPERM2, data)
+		INIT 	<- fun_cost.tab(R_PERM1, R_PERM2, data)
 		ANS 	<- ISLANDS.TAB(data, PDFfilename, .pop.size, .pr.elit, pr.cross, pr.mut, op.cross, op.mut,
 			init.individuals, .per.sampling,
 			.emigration.policy, .per.limit,
@@ -105,20 +101,16 @@ ISLANDS <-
 		M_START	<- get_matrix(R_PERM1, R_PERM2, data)
 		M_END 	<- get_matrix(ANS_ROW, ANS_COL, data)
 
-		M_START <- mapply( function(x) cbind(data[x,1],data[x,2]), R_PERM)
-		M_END	<- mapply( function(x) cbind(data[x,1],data[x,2]), ANS_MTX)
-
 		PLOT_START 	<- myImagePlot(M_START, xlab="X-axe", ylab="Y-axe", zlim=c(0,1))
-			print(levelplot)
 		PLOT_END 	<- myImagePlot(M_END, xlab="X-axe", ylab="Y-axe", zlim=c(0,1))
-			print(levelplot)
 
 		print(PLOT_START)
 		print(PLOT_END)
 	}
+
 	dev.off()
 
-	return(INIT, ANS_RES)
+	return(c(INIT, ANS_RES))
 
 }
 
@@ -144,7 +136,7 @@ ISLANDS.TSP <-
 			registerDoParallel(cluster)
 
 			results <- (foreach(init_populations=init_population, .combine=cbind, .export=ls(.GlobalEnv)) %dopar% 
-					SOLVE.TSP(data, init_populations, .time.limit=.time.it))
+					SOLVE.TSP(data, init_population, op.cross, op.mut, pr.cross, pr.mut, pop.size, pr.elit, .time.it))
 
 			migrations <- sample(1:n_cores)
 
@@ -172,7 +164,7 @@ ISLANDS.TSP <-
 			registerDoParallel(cluster)
 
 			results <- (foreach(init_populations=init_population, .combine=cbind, .export=ls(.GlobalEnv)) %dopar% 
-					SOLVE_TSP(data, init_populations, .time.limit=.time.it))
+					SOLVE.TSP(data, init_population, op.cross, op.mut, pr.cross, pr.mut, pop.size, pr.elit, .time.it))
 
 			nums	<- results[2,]
 			per 	<- nums / min(nums)
@@ -201,14 +193,14 @@ ISLANDS.TSP <-
 }
 
 SOLVE.TSP <- 
-	function(data, init_population, op.cross="pmx", op.mut="sim", pr.cross=0.6, pr.mut=0.1, pop.size=20, pr.elit=0.15, .time.limit=10)
+	function(data, init_population, op.cross="pmx", op.mut="sim", pr.cross=0.6, pr.mut=0.1, pop.size=20, pr.elit=0.15, .time.it=10)
 {
 	t 					<- Sys.time()
 	elitists 			<- max(round(pop.size*pr.elit),3)
 	pop_results 		<- fun_cost(data,init_population)
 	order_results		<- order(pop_results)
 
-	while(as.numeric(Sys.time()-t, units="secs") < .time.limit) 
+	while(as.numeric(Sys.time()-t, units="secs") < .time.it) 
 	{
 		init_population 		<- flat(init_population,order_results[1:elitists])
 		init_population			<- generate_offspring(init_population, op.cross, op.mut, pop.size, pr.cross, pr.mut)
@@ -221,7 +213,6 @@ SOLVE.TSP <-
 	ANSWER <- rbind(best_permutations,min_results)	
 
 	return(ANSWER)
-
 }
 
 ISLANDS.LOP <- 
@@ -233,10 +224,13 @@ ISLANDS.LOP <-
 	# Calculate the number of cores
 	n_cores <- detectCores() -1 # usually 3
 
-	init_population <- repeat(list(heuristic.lop(data, init.individuals), n_cores))
-	init_population_row <- mapply(function(x) list(init_population[[x]][,1]), 1:init.individuals)
-	init_population_col <- mapply(function(x) list(init_population[[x]][,2]), 1:init.individuals)
+	init_population <- heuristic.lop(data, init.individuals)
+	init_population_row <- mapply(function(x) list(init_population[[x]][1,]), 1:init.individuals)
+	init_population_row <- matrix(rep(init_population_row,n_cores), nrow=init.individuals, ncol=n_cores)
+	init_population_col <- mapply(function(x) list(init_population[[x]][2,]), 1:init.individuals)
+	init_population_col <- matrix(rep(init_population_col,n_cores), nrow=init.individuals, ncol=n_cores)
 	len_population 	<- max(round(pr.elit*pop.size),3)
+
 
 	if (.emigration.policy)
 	{
@@ -246,15 +240,15 @@ ISLANDS.LOP <-
 			cluster	<- makeCluster(n_cores)
 			registerDoParallel(cluster)
 
-			results <- (foreach(pos=1:n_cores, .combine=cbind, .export=ls(.GlobalEnv)) %dopar% 
-					SOLVE.LOP(data, init_population_row[pos], init_population_col[pos], .time.limit=.time.it))
+			results <- (foreach(x=1:n_cores, .combine='cbind', .export=ls(.GlobalEnv)) %dopar% 
+				SOLVE.LOP(data, init_population_row[,x], init_population_col[,x], pop.size, pr.elit, pr.cross, pr.mut, op.cross, op.mut, .time.it))
 
 			migrations <- sample(1:n_cores)
 
 			init_population_row <- 
 			mapply ( 
 				function(x,y) 
-					list( c( results[1,][ (1:(len_population-1)) + x*len_population],
+					cbind( c( results[1,][ (1:(len_population-1)) + x*len_population],
 					results[1,][len_population + y*len_population])),
 					0:(n_cores-1),
 					migrations-1
@@ -263,14 +257,16 @@ ISLANDS.LOP <-
 			init_population_col <- 
 			mapply ( 
 				function(x,y) 
-					list( c( results[2,][ (1:(len_population-1)) + x*len_population],
+					cbind( c( results[2,][ (1:(len_population-1)) + x*len_population],
 					results[2,][len_population + y*len_population])),
 					0:(n_cores-1),
 					migrations-1
 			)
+
 		}
 
 		stopCluster(cluster)
+		closeAllConnections()
 	}
 
 
@@ -282,8 +278,9 @@ ISLANDS.LOP <-
 			cluster	<- makeCluster(n_cores)
 			registerDoParallel(cluster)
 
-			results <- (foreach(init_populations=init_population, .combine=cbind, .export=ls(.GlobalEnv)) %dopar% 
-					SOLVE_TSP(data, init_populations, .time.limit=.time.it))
+			results <- (foreach(x=1:n_cores, .combine='c', .export=ls(.GlobalEnv)) %dopar% 
+					SOLVE.LOP(data, init_population_row[,x], init_population_col[,x], pop.size, pr.elit, pr.cross, pr.mut, op.cross, op.mut, .time.it)
+					)
 
 			nums	<- results[3,]
 			per 	<- nums / min(nums)
@@ -304,34 +301,34 @@ ISLANDS.LOP <-
 			init_population <- mapply ( function(x)  list(results[1,][(1:len_population)*x]), 1:n_cores )
 
 			stopCluster(cluster)
+			closeAllConnections()
 		}
 	}
 	
-	flat_res	<- unlist(results[2,])
+	flat_res	<- unlist(results[3,])
 	ANS_INDEX 	<- which(flat_res==min(flat_res))
 
 	return(results[,ANS_INDEX])
-
 }
 
 SOLVE.LOP <- 
-function(data, init_population_row, init_population_col, pop.size=20, pr.elit=0.15, pr.cross=0.6, pr.mut=0.1, op.cross="pmx", op.mut="sim", .time.limit=60)
+function(data, init_population_row, init_population_col, pop.size=20, pr.elit=0.15, pr.cross=0.6, pr.mut=0.1, op.cross="pmx", op.mut="sim", .time.it=60)
 {
 	t 						<- Sys.time()
 	elitists 				<- max(round(pop.size*pr.elit),3)
-	pop_results 			<- fun_cost.lop(data,init_population_row, init_population_col)
+	pop_results 			<- fun_cost(data,init_population_row, init_population_col, .problem="LOP")
 	order_results 			<- order(pop_results)
 	min_results 			<- c(0)
 	best_permutations_row 	<- c()
 	best_permutations_col 	<- c() 
 
-	while(as.numeric(Sys.time()-t, units="secs") < .time.limit) 
+	while(as.numeric(Sys.time()-t, units="secs") < .time.it) 
 	{
 		init_population_row 	<- flat(init_population_row,order_results[1:elitists])
 		init_population_col 	<- flat(init_population_col,order_results[1:elitists])
 		init_population_row 	<- generate_offspring(init_population_row,op.cross, op.mut, pop.size, pr.cross, pr.mut)
 		init_population_col 	<- generate_offspring(init_population_col,op.cross, op.mut, pop.size, pr.cross, pr.mut)
-		pop_results 			<- fun_cost.lop(data, init_population_row, init_population_col)
+		pop_results 			<- fun_cost(data, init_population_row, init_population_col, .problem="LOP")
 		order_results 			<- order(pop_results)
 		min_results 			<- pop_results[order_results[1:elitists]]
 		best_permutations_row 	<- init_population_row[order_results[1:elitists]]
@@ -347,15 +344,15 @@ function(data, init_population_row, init_population_col, pop.size=20, pr.elit=0.
 
 ISLANDS.TAB <- 
 	function(data, PDFfilename="ga.pdf", pop.size=20, pr.elit=0.15, pr.cross=0.6, pr.mut=0.1, op.cross="pmx", op.mut="sim",
-		init.individuals = 200, .per.sampling = 0.1,
+		init.individuals = 20, .per.sampling = 0.1,
 		.emigration.policy = TRUE, .per.limit=0.05,
 		.number.its=10 ,.time.it=15)
 {
 	# Calculate the number of cores
 	n_cores <- detectCores() -1 # usually 3
 
-	init_population_row <- replicate(init.individuals,list(sample(nrow(data)))) 
-	init_population_col <- replicate(init.individuals,list(sample(ncol(data)))) 
+	init_population_row <- replicate(n_cores,replicate(init.individuals,list(sample(nrow(data)))))
+	init_population_col <- replicate(n_cores,replicate(init.individuals,list(sample(ncol(data)))))
 	len_population 	<- max(round(pr.elit*pop.size),3)
 
 	if (.emigration.policy)
@@ -366,15 +363,15 @@ ISLANDS.TAB <-
 			cluster	<- makeCluster(n_cores)
 			registerDoParallel(cluster)
 
-			results <- (foreach(pos=1:n_cores, .combine=cbind, .export=ls(.GlobalEnv)) %dopar% 
-					SOLVE.TAB(data, init_population_row[pos], init_population_col[pos], .time.limit=.time.it))
+			results <- (foreach(x=1:n_cores, .combine='cbind', .export=ls(.GlobalEnv)) %dopar% 
+				SOLVE.TAB(data, init_population_row[,x], init_population_col[,x], pop.size, pr.elit, pr.cross, pr.mut, op.cross, op.mut, .time.it))
 
 			migrations <- sample(1:n_cores)
 
 			init_population_row <- 
 			mapply ( 
 				function(x,y) 
-					list( c( results[1,][ (1:(len_population-1)) + x*len_population],
+					cbind( c( results[1,][ (1:(len_population-1)) + x*len_population],
 					results[1,][len_population + y*len_population])),
 					0:(n_cores-1),
 					migrations-1
@@ -383,14 +380,16 @@ ISLANDS.TAB <-
 			init_population_col <- 
 			mapply ( 
 				function(x,y) 
-					list( c( results[2,][ (1:(len_population-1)) + x*len_population],
+					cbind( c( results[2,][ (1:(len_population-1)) + x*len_population],
 					results[2,][len_population + y*len_population])),
 					0:(n_cores-1),
 					migrations-1
 			)
+
 		}
 
 		stopCluster(cluster)
+		closeAllConnections()
 	}
 
 
@@ -402,8 +401,9 @@ ISLANDS.TAB <-
 			cluster	<- makeCluster(n_cores)
 			registerDoParallel(cluster)
 
-			results <- (foreach(init_populations=init_population, .combine=cbind, .export=ls(.GlobalEnv)) %dopar% 
-					SOLVE.TAB(data, init_populations, .time.limit=.time.it))
+			results <- (foreach(x=1:n_cores, .combine='cbind', .export=ls(.GlobalEnv)) %dopar% 
+					SOLVE.TAB(data, init_population_row[,x], init_population_col[,x], pop.size, pr.elit, pr.cross, pr.mut, op.cross, op.mut, .time.it)
+					)
 
 			nums	<- results[3,]
 			per 	<- nums / min(nums)
@@ -424,10 +424,11 @@ ISLANDS.TAB <-
 			init_population <- mapply ( function(x)  list(results[1,][(1:len_population)*x]), 1:n_cores )
 
 			stopCluster(cluster)
+			closeAllConnections()
 		}
 	}
 	
-	flat_res	<- unlist(results[2,])
+	flat_res	<- unlist(results[3,])
 	ANS_INDEX 	<- which(flat_res==min(flat_res))
 
 	return(results[,ANS_INDEX])
@@ -435,23 +436,23 @@ ISLANDS.TAB <-
 }
 
 SOLVE.TAB <- 
-function(data, init_population_row, init_population_col, pop.size=20, pr.elit=0.15, pr.cross=0.6, pr.mut=0.1, op.cross="pmx", op.mut="sim", .time.limit=60)
+function(data, init_population_row, init_population_col, pop.size=20, pr.elit=0.15, pr.cross=0.6, pr.mut=0.1, op.cross="pmx", op.mut="sim", .time.it=60)
 {
 	t 						<- Sys.time()
 	elitists 				<- max(round(pop.size*pr.elit),3)
-	pop_results 			<- fun_cost.tab(data,init_population_row, init_population_col)
+	pop_results 			<- fun_cost(data,init_population_row, init_population_col, .problem="TAB")
 	order_results 			<- order(pop_results)
 	min_results 			<- c(0)
 	best_permutations_row 	<- c()
 	best_permutations_col 	<- c() 
 
-	while(as.numeric(Sys.time()-t, units="secs") < .time.limit) 
+	while(as.numeric(Sys.time()-t, units="secs") < .time.it) 
 	{
 		init_population_row 	<- flat(init_population_row,order_results[1:elitists])
 		init_population_col 	<- flat(init_population_col,order_results[1:elitists])
 		init_population_row 	<- generate_offspring(init_population_row,op.cross, op.mut, pop.size, pr.cross, pr.mut)
 		init_population_col 	<- generate_offspring(init_population_col,op.cross, op.mut, pop.size, pr.cross, pr.mut)
-		pop_results 			<- fun_cost.tab(data, init_population_row, init_population_col)
+		pop_results 			<- fun_cost(data, init_population_row, init_population_col, .problem="TAB")
 		order_results 			<- order(pop_results)
 		min_results 			<- pop_results[order_results[1:elitists]]
 		best_permutations_row 	<- init_population_row[order_results[1:elitists]]
@@ -459,9 +460,7 @@ function(data, init_population_row, init_population_col, pop.size=20, pr.elit=0.
 	}
 
 	ANSWER <- rbind(best_permutations_row,best_permutations_col,min_results)	
-
 	return(ANSWER)
-		
 }
 
 
@@ -508,9 +507,9 @@ layout(matrix(data=c(1,2), nrow=1, ncol=2), widths=c(4,1), heights=c(1,1))
  ColorLevels <- seq(min, max, length=length(ColorRamp))
 
  # Reverse Y axis
- reverse <- nrow(x) : 1
- yLabels <- yLabels[reverse]
- x <- x[reverse,]
+ # reverse <- nrow(x) : 1
+ # yLabels <- yLabels[reverse]
+ # x <- x[reverse,]
 
  # Data Map
  par(mar = c(3,5,2.5,2))

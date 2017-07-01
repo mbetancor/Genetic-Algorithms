@@ -91,7 +91,6 @@ MAIN <- function(data, PDFfilename="ga.pdf", .problem="TSP" ,pop.size=20, pr.eli
 	end_results 	<- c()
 	counter			<- 1
 
-	print(results)
 	for (its in results[,2])
 	{
 		n_its 	 <- c(n_its,its)

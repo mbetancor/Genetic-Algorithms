@@ -46,7 +46,7 @@ function(data,n) {
 	aux_matrix 	<- get_matrix(perm_row,c(1:len), data)
 	perm_col 	<- order(mapply(function(x) sum(aux_matrix[,x][n:len]), 1:len))
 
-	return(cbind(perm_row,perm_col)) 
+	return(rbind(perm_row,perm_col)) 
 }
 
 # heuristic.tab <- 
